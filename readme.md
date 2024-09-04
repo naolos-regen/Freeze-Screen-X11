@@ -1,12 +1,21 @@
 # Freeze-Screen-X11
 
-It's my first serious C program.
+### It's my first serious C program.
 
-Problem why I designed it: 
+##### Problem why I designed it: 
 
 - I don't have a Logout function and I needed something to work on.
 
-How to use it?
+#### What dependencies
+
+```bash
+> gcc :-)
+> vlc
+> x11 # utils, dev, whatever tf u need for it to work*
+> emacs # for editing
+```
+
+#### How to use it?
 
 ```bash
 $ gcc -o [executable_file] freeze_x11.c -lX11
@@ -17,3 +26,25 @@ $ ./executable_file
 - Type your username & your password ($USER !root).
 
 - License?
+
+#### how to install x11?
+
+```bash
+# Ensure that you have build-essential
+
+# Fedora
+sudo dnf install xorg-x11-server-devel libX11-devel libXext-devel libXrandr-devel libXtst-devel
+# Debian
+sudo apt-get install libx11-dev libxext-dev libxrandr-dev libxtst-dev
+# Arch-Linux
+sudo pacman -S libx11 libxext libxrandr libxtst
+# Slackware
+sudo slackpkg install x11-devel
+# Void-Linux
+sudo xbps-install -S libX11-devel libXext-devel libXrandr-devel libXtst-devel
+
+```
+
+#### Wayland?
+
+no.
