@@ -130,7 +130,7 @@ void update_display() {
 
 void play_video() {
     // Replace 'path_to_your_video.mp4' with the actual path to your video file
-    const char *video_command = "vlc --play-and-exit /home/naolos/Documents/Programming/freezing/youareanidiot.webm";
+    const char *video_command = "vlc --play-and-exit ./youareanidiot.webm";
     execute_command(video_command);
 }
 
