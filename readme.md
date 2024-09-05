@@ -5,7 +5,9 @@
 ##### Problem why I designed it: 
 
 - I don't have a Logout function and I needed something to work on.
-- [ ] TODO: Remove duplicates and make sure code looks better LOL.
+- [x] TODO: Remove duplicates and make sure code looks better LOL. //not so much but at least smth
+- [ ] TODO: Race Conditions with Forking
+- [ ] TODO: Unlimited Attempts
 
 #### What dependencies
 
