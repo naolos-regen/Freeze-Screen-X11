@@ -36,10 +36,12 @@ int authenticate_user(const char *username, const char *password) {
     // Prepare arguments for execvp
     char *argv[] = {"./auth_script.sh", (char *)username, (char *)password, NULL};
 
+    // Removed debugging prints that expose sensitive information
+
     pid = fork();  // Create a new process
     if (pid == -1) {
         perror("fork");
-        return -1; // Fork failed
+        return -1;  // Fork failed
     }
 
     if (pid == 0) {  // Child process
@@ -48,14 +50,15 @@ int authenticate_user(const char *username, const char *password) {
         exit(EXIT_FAILURE);
     } else {  // Parent process
         wait(&status);  // Wait for the child process to complete
-        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-            return 0;  // Authentication successful
-        } else {
-            return -1; // Authentication failed
+        if (WIFEXITED(status)) {
+            // Removed debugging prints that expose sensitive information
+            if (WEXITSTATUS(status) == 0) {
+                return 0;  // Authentication successful
+            }
         }
+        return -1;  // Authentication failed
     }
 }
-
 
 void create_overlay_window() {
     int screen = DefaultScreen(display);
@@ -151,16 +154,17 @@ void handle_overlay_input(XEvent *event) {
         char buffer[BUFFER_SIZE];
         int bytes = XLookupString(&event->xkey, buffer, sizeof(buffer), &key, NULL);
 
+        // Handle "Enter" key press
         if (key == XK_Return) {
             if (state == 0) {  // Username entry
                 strncpy(username, input_buffer, BUFFER_SIZE - 1);
-                username[BUFFER_SIZE - 1] = '\0';
-                input_length = 0;
+                username[BUFFER_SIZE - 1] = '\0';  // Ensure null-termination
+                input_length = 0;  // Reset input buffer
                 input_buffer[0] = '\0';
-                state = 1; // Switch to password entry
+                state = 1;  // Switch to password entry
             } else if (state == 1) {  // Password entry
                 strncpy(password, input_buffer, BUFFER_SIZE - 1);
-                password[BUFFER_SIZE - 1] = '\0';
+                password[BUFFER_SIZE - 1] = '\0';  // Ensure null-termination
 
                 if (authenticate_user(username, password) == 0) {
                     // Authentication successful
@@ -174,20 +178,34 @@ void handle_overlay_input(XEvent *event) {
                 } else {
                     retry_count++;
                     if (retry_count >= MAX_RETRIES) {
-                        play_video();
-                        retry_count = 0;
+                        play_video();  // Handle too many retries
+                        retry_count = 0;  // Reset retries
                     } else {
-                        state = 0; // Back to username entry after failure
+                        state = 0;  // Go back to username entry
                     }
                 }
             }
-        } else if (key == XK_BackSpace && input_length > 0) {
-            input_buffer[--input_length] = '\0';
+            input_length = 0;  // Clear input buffer after return
+            input_buffer[0] = '\0';
+        }
+
+        // Handle backspace key press
+        else if (key == XK_BackSpace && input_length > 0) {
+            input_buffer[--input_length] = '\0';  // Remove the last character
             update_display();
-        } else if (bytes > 0 && input_length < BUFFER_SIZE - 1) {
-            strncat(input_buffer, buffer, bytes);
-            input_length += bytes;
-            update_display();
+        }
+
+        // Handle regular character input
+        else if (bytes > 0) {
+            int space_remaining = BUFFER_SIZE - input_length - 1;
+            if (space_remaining > 0) {
+                // Limit to the space remaining
+                int copy_size = (bytes > space_remaining) ? space_remaining : bytes;
+                strncat(input_buffer, buffer, copy_size);
+                input_length += copy_size;
+                input_buffer[input_length] = '\0';  // Ensure null-termination
+                update_display();
+            }
         }
     } else if (event->type == Expose) {
         update_display();
