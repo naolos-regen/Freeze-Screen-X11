@@ -31,28 +31,16 @@ void execute_command(const char *command) {
 
 int authenticate_user(const char *username, const char *password) {
     char command[BUFFER_SIZE];
-    snprintf(command, BUFFER_SIZE, "echo %s | sudo -S -u %s whoami", password, username);
+    snprintf(command, BUFFER_SIZE, "echo %s | pamtester login %s authenticate", password, username); // For login authentication
 
-    FILE *fp = popen(command, "r");
-    if (fp == NULL) {
-        perror("popen");
-        return -1;
-    }
-
-    char result[BUFFER_SIZE];
-    if (fgets(result, sizeof(result) - 1, fp) == NULL) {
-        pclose(fp);
+    int retval = system(command);
+    if (retval == 0) {
+        return 0;  // Authentication successful
+    } else {
         return -1;  // Authentication failed
     }
-
-    pclose(fp);
-    // Check if the command was successful
-    if (strstr(result, username) != NULL) {
-        return 0;  // Authentication successful
-    }
-
-    return -1;  // Authentication failed
 }
+
 
 void create_overlay_window() {
     int screen = DefaultScreen(display);
