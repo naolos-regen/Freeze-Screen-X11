@@ -151,18 +151,19 @@ void handle_overlay_input(XEvent *event) {
         char buffer[BUFFER_SIZE];
         int bytes = XLookupString(&event->xkey, buffer, sizeof(buffer), &key, NULL);
 
-        if (key == XK_Return) {  // Enter key
-            if (state == 0) { // Username entry
+        if (key == XK_Return) {
+            if (state == 0) {  // Username entry
                 strncpy(username, input_buffer, BUFFER_SIZE - 1);
                 username[BUFFER_SIZE - 1] = '\0';
                 input_length = 0;
                 input_buffer[0] = '\0';
                 state = 1; // Switch to password entry
-                printf("Username entered. Please enter password:\n");
-            } else if (state == 1) { // Password entry
-                if (authenticate_user(username, input_buffer) == 0) {
-                    printf("Authentication successful.\n");
-                    // Clear and destroy the overlay window
+            } else if (state == 1) {  // Password entry
+                strncpy(password, input_buffer, BUFFER_SIZE - 1);
+                password[BUFFER_SIZE - 1] = '\0';
+
+                if (authenticate_user(username, password) == 0) {
+                    // Authentication successful
                     XClearWindow(display, overlay_window);
                     XDestroyWindow(display, overlay_window);
                     XFreeGC(display, gc);
@@ -173,56 +174,22 @@ void handle_overlay_input(XEvent *event) {
                 } else {
                     retry_count++;
                     if (retry_count >= MAX_RETRIES) {
-                        printf("Maximum retries reached. Playing video.\n");
                         play_video();
-                        retry_count = 0; // Reset retry count after playing video
+                        retry_count = 0;
                     } else {
-                        printf("Incorrect password. Try again.\n");
-                        XClearWindow(display, overlay_window);
-
-                        XSetForeground(display, gc, 0xFF0000);  // Set text color to red
-
-                        int screen_width = DisplayWidth(display, DefaultScreen(display));
-                        int screen_height = DisplayHeight(display, DefaultScreen(display));
-
-                        int text_width = XTextWidth(font_info, "Enter Username:", strlen("Enter Username:"));
-                        int text_x = SCREEN_MIDDLE(screen_width, text_width);
-                        int text_y = screen_height / 2 - 40;
-
-                        int error_width = XTextWidth(font_info, "Incorrect password. Try again.", strlen("Incorrect password. Try again."));
-                        int input_x = SCREEN_MIDDLE(screen_width, error_width);
-                        int input_y = screen_height / 2 + 20;
-
-                        XDrawString(display, overlay_window, gc, text_x, text_y, "Enter Username:", strlen("Enter Username:"));
-                        XDrawString(display, overlay_window, gc, input_x, input_y, "Incorrect password. Try again.", strlen("Incorrect password. Try again."));
-                        input_length = 0;  // Clear the input buffer
-                        state = 0; // Switch back to username entry
+                        state = 0; // Back to username entry after failure
                     }
                 }
             }
-        } else if (key == XK_Escape) {  // Escape key
-            XClearWindow(display, overlay_window);
-            XDestroyWindow(display, overlay_window);
-            XFreeGC(display, gc);
-            XFreeFont(display, font_info);
-            XUngrabPointer(display, CurrentTime);
-            XUngrabKeyboard(display, CurrentTime);
-            exit(1);
-        } else if (key == XK_BackSpace) {  // Backspace key
-            if (input_length > 0) {
-                input_buffer[--input_length] = '\0';
-                XClearWindow(display, overlay_window);
-                update_display();
-            }
+        } else if (key == XK_BackSpace && input_length > 0) {
+            input_buffer[--input_length] = '\0';
+            update_display();
         } else if (bytes > 0 && input_length < BUFFER_SIZE - 1) {
-            // Add all printable characters to the input buffer
             strncat(input_buffer, buffer, bytes);
             input_length += bytes;
-            XClearWindow(display, overlay_window);
             update_display();
         }
     } else if (event->type == Expose) {
-        XClearWindow(display, overlay_window);
         update_display();
     }
 }
@@ -236,9 +203,7 @@ int main() {
 
     create_overlay_window();
 
-    XGrabPointer(display, overlay_window, True,
-                 ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
-                 GrabModeAsync, GrabModeAsync, overlay_window, None, CurrentTime);
+    XGrabPointer(display, overlay_window, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync, GrabModeAsync, overlay_window, None, CurrentTime);
     XGrabKeyboard(display, overlay_window, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 
     XEvent event;
@@ -249,11 +214,9 @@ int main() {
         }
     }
 
-    // Clean up (this will never be reached in this example)
     XDestroyWindow(display, overlay_window);
     XFreeGC(display, gc);
     XFreeFont(display, font_info);
     XCloseDisplay(display);
-
     return 0;
 }

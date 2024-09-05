@@ -21,10 +21,12 @@
 ```bash
 $ gcc -o [executable_file] freeze_x11.c -lX11
 $ ./executable_file
+# window opens
 ```
 
 - If you try to exit just press esc, if not switch /dev/tty to kill the process.
 - Type your username & your password ($USER !root).
+- The current $USER where X11 is running on
 
 - License?
 
