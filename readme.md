@@ -5,9 +5,8 @@
 ##### Problem why I designed it: 
 
 - I don't have a Logout function and I needed something to work on.
-- [x] TODO: Remove duplicates and make sure code looks better LOL. //not so much but at least smth
-- [ ] TODO: Race Conditions with Forking
-- [ ] TODO: Unlimited Attempts
+- [ ] TODO: use PAM API instead of pamtester. .. .... buffer overflow will happen a lot 
+
 
 #### What dependencies
 
