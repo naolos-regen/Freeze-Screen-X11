@@ -30,34 +30,28 @@ void execute_command(const char *command) {
 }
 
 int authenticate_user(const char *username, const char *password) {
-    pid_t pid;
-    int status;
+    char command[BUFFER_SIZE];
+    snprintf(command, BUFFER_SIZE, "echo %s | sudo -S -u %s whoami", password, username);
 
-    // Prepare arguments for execvp
-    char *argv[] = {"./auth_script.sh", (char *)username, (char *)password, NULL};
-
-    // Removed debugging prints that expose sensitive information
-
-    pid = fork();  // Create a new process
-    if (pid == -1) {
-        perror("fork");
-        return -1;  // Fork failed
+    FILE *fp = popen(command, "r");
+    if (fp == NULL) {
+        perror("popen");
+        return -1;
     }
 
-    if (pid == 0) {  // Child process
-        execvp("./auth_script.sh", argv);  // Replace the child process with the script
-        perror("execvp");  // If execvp returns, there's an error
-        exit(EXIT_FAILURE);
-    } else {  // Parent process
-        wait(&status);  // Wait for the child process to complete
-        if (WIFEXITED(status)) {
-            // Removed debugging prints that expose sensitive information
-            if (WEXITSTATUS(status) == 0) {
-                return 0;  // Authentication successful
-            }
-        }
+    char result[BUFFER_SIZE];
+    if (fgets(result, sizeof(result) - 1, fp) == NULL) {
+        pclose(fp);
         return -1;  // Authentication failed
     }
+
+    pclose(fp);
+    // Check if the command was successful
+    if (strstr(result, username) != NULL) {
+        return 0;  // Authentication successful
+    }
+
+    return -1;  // Authentication failed
 }
 
 void create_overlay_window() {
@@ -157,14 +151,12 @@ void handle_overlay_input(XEvent *event) {
         // Handle "Enter" key press
         if (key == XK_Return) {
             if (state == 0) {  // Username entry
-                strncpy(username, input_buffer, BUFFER_SIZE - 1);
-                username[BUFFER_SIZE - 1] = '\0';  // Ensure null-termination
+                snprintf(username, BUFFER_SIZE, "%s", input_buffer);  // Safer than strncpy
                 input_length = 0;  // Reset input buffer
                 input_buffer[0] = '\0';
                 state = 1;  // Switch to password entry
             } else if (state == 1) {  // Password entry
-                strncpy(password, input_buffer, BUFFER_SIZE - 1);
-                password[BUFFER_SIZE - 1] = '\0';  // Ensure null-termination
+                snprintf(password, BUFFER_SIZE, "%s", input_buffer);  // Safer than strncpy
 
                 if (authenticate_user(username, password) == 0) {
                     // Authentication successful
@@ -174,6 +166,10 @@ void handle_overlay_input(XEvent *event) {
                     XFreeFont(display, font_info);
                     XUngrabPointer(display, CurrentTime);
                     XUngrabKeyboard(display, CurrentTime);
+
+                    // Securely erase sensitive data from memory
+                    memset(password, 0, BUFFER_SIZE);
+
                     exit(0);
                 } else {
                     retry_count++;
@@ -184,6 +180,8 @@ void handle_overlay_input(XEvent *event) {
                         state = 0;  // Go back to username entry
                     }
                 }
+                // Securely erase password after checking
+                memset(password, 0, BUFFER_SIZE);
             }
             input_length = 0;  // Clear input buffer after return
             input_buffer[0] = '\0';
@@ -232,9 +230,14 @@ int main() {
         }
     }
 
+    // Cleanup and secure memory before exiting
     XDestroyWindow(display, overlay_window);
     XFreeGC(display, gc);
     XFreeFont(display, font_info);
     XCloseDisplay(display);
+
+    // Securely erase sensitive data from memory
+    memset(password, 0, BUFFER_SIZE);
+
     return 0;
 }
