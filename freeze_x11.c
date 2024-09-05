@@ -31,7 +31,11 @@ void execute_command(const char *command) {
 
 int authenticate_user(const char *username, const char *password) {
     char command[BUFFER_SIZE];
-    snprintf(command, BUFFER_SIZE, "echo %s | pamtester login %s authenticate", password, username); // For login authentication
+
+    // Use snprintf to safely format the command with escaped strings
+    snprintf(command, BUFFER_SIZE,
+             "echo \"%s\" | pamtester login \"%s\" authenticate",
+             password, username); // Quoting the username and password
 
     int retval = system(command);
     if (retval == 0) {
@@ -40,7 +44,6 @@ int authenticate_user(const char *username, const char *password) {
         return -1;  // Authentication failed
     }
 }
-
 
 void create_overlay_window() {
     int screen = DefaultScreen(display);
