@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
+#include <sys/wait.h>
 
 #define BUFFER_SIZE 128
 #define SCREEN_MIDDLE(screen_width, text_width) ((screen_width - text_width) / 2)
@@ -29,22 +30,32 @@ void execute_command(const char *command) {
 }
 
 int authenticate_user(const char *username, const char *password) {
-    char command[BUFFER_SIZE * 2];
-    snprintf(command, sizeof(command), "./auth_script.sh %s %s", username, password);
+    pid_t pid;
+    int status;
 
-    int retval = system(command);
+    // Prepare arguments for execvp
+    char *argv[] = {"./auth_script.sh", (char *)username, (char *)password, NULL};
 
-    if (retval == -1) {
-        perror("system");
-        return -1; // Return failure code
-    } else if (WIFEXITED(retval) && WEXITSTATUS(retval) == 0) {
-        // Command executed successfully
-        return 0; // Authentication successful
-    } else {
-        // Command failed
-        return -1; // Authentication failed
+    pid = fork();  // Create a new process
+    if (pid == -1) {
+        perror("fork");
+        return -1; // Fork failed
+    }
+
+    if (pid == 0) {  // Child process
+        execvp("./auth_script.sh", argv);  // Replace the child process with the script
+        perror("execvp");  // If execvp returns, there's an error
+        exit(EXIT_FAILURE);
+    } else {  // Parent process
+        wait(&status);  // Wait for the child process to complete
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+            return 0;  // Authentication successful
+        } else {
+            return -1; // Authentication failed
+        }
     }
 }
+
 
 void create_overlay_window() {
     int screen = DefaultScreen(display);
@@ -137,9 +148,8 @@ void play_video() {
 void handle_overlay_input(XEvent *event) {
     if (event->type == KeyPress) {
         KeySym key;
-        char buffer[1];
-        XComposeStatus compose;
-        XLookupString(&event->xkey, buffer, sizeof(buffer), &key, &compose);
+        char buffer[BUFFER_SIZE];
+        int bytes = XLookupString(&event->xkey, buffer, sizeof(buffer), &key, NULL);
 
         if (key == XK_Return) {  // Enter key
             if (state == 0) { // Username entry
@@ -202,21 +212,18 @@ void handle_overlay_input(XEvent *event) {
             if (input_length > 0) {
                 input_buffer[--input_length] = '\0';
                 XClearWindow(display, overlay_window);
-                update_display();  // Function to update the display
+                update_display();
             }
-        } else if (key >= XK_space && key <= XK_asciitilde && input_length < BUFFER_SIZE - 1) {
-            // Ensure printable characters are within range
-            if (key >= XK_space && key <= XK_asciitilde) {
-                buffer[0] = (char)key;
-                input_buffer[input_length++] = buffer[0];
-                input_buffer[input_length] = '\0';
-                XClearWindow(display, overlay_window);
-                update_display();  // Function to update the display
-            }
+        } else if (bytes > 0 && input_length < BUFFER_SIZE - 1) {
+            // Add all printable characters to the input buffer
+            strncat(input_buffer, buffer, bytes);
+            input_length += bytes;
+            XClearWindow(display, overlay_window);
+            update_display();
         }
     } else if (event->type == Expose) {
         XClearWindow(display, overlay_window);
-        update_display();  // Function to update the display
+        update_display();
     }
 }
 
