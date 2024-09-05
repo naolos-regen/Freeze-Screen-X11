@@ -16,6 +16,7 @@
 > vlc
 > x11 # utils, dev, whatever tf u need for it to work*
 > emacs # for editing
+> pamtester # gave up with auth_script.sh
 ```
 
 #### How to use it?
